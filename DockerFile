@@ -1,0 +1,15 @@
+FROM mcr.microsoft.com/playwright/python:v1.40.0-jammy
+
+WORKDIR /app
+
+# Instala requests
+RUN pip install requests flask
+
+# Copia el script
+COPY app.py .
+
+# Expone puerto
+EXPOSE 5000
+
+# Ejecuta la app
+CMD ["python3", "app.py"]
