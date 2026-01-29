@@ -1,13 +1,11 @@
-FROM mcr.microsoft.com/playwright/python:v1.42.1-jammy
+FROM mcr.microsoft.com/playwright/python:v1.42.1
 
 WORKDIR /app
 
-# Instalar Flask directamente
 RUN pip install flask
 
-# Copiar el código
 COPY main.py .
 
-EXPOSE 5000
+EXPOSE 3000
 
 CMD ["python", "main.py"]
