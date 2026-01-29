@@ -2,7 +2,11 @@ FROM mcr.microsoft.com/playwright/python:latest
 
 WORKDIR /app
 
-RUN pip install flask
+# Instala dependencias Python
+RUN pip install flask playwright
+
+# Instala navegadores (importante)
+RUN playwright install --with-deps
 
 COPY main.py .
 
