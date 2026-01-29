@@ -1,45 +1,65 @@
-from flask import Flask, jsonify
+from flask import Flask, request, send_from_directory
 from playwright.sync_api import sync_playwright
-import time
-import os
+import os, time, uuid
 
 app = Flask(__name__)
 
-@app.route("/run/ai-news")
-def run_ai_news():
-    os.makedirs("videos", exist_ok=True)
+BASE_DIR = os.getcwd()
+VIDEO_DIR = os.path.join(BASE_DIR, "videos")
+os.makedirs(VIDEO_DIR, exist_ok=True)
+
+@app.route("/run")
+def run():
+    url = request.args.get(
+        "url",
+        "https://www.xataka.com/tag/inteligencia-artificial"
+    )
+
+    run_id = str(uuid.uuid4())
+    run_video_dir = os.path.join(VIDEO_DIR, run_id)
+    os.makedirs(run_video_dir, exist_ok=True)
+
+    articles = []
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-
         context = browser.new_context(
-            record_video_dir="videos/"
+            record_video_dir=run_video_dir,
+            viewport={"width": 1280, "height": 800}
         )
-
         page = context.new_page()
 
-        # Página interactiva (ejemplo)
-        page.goto("https://www.theverge.com/ai-artificial-intelligence")
+        page.goto(url, timeout=30000)
+        page.wait_for_load_state("networkidle")
 
-        # Esperar a que cargue contenido dinámico
-        page.wait_for_selector("h2", timeout=10000)
-
-        # Scroll lento (para que el video se vea bien)
-        for _ in range(5):
-            page.mouse.wheel(0, 1200)
+        # Scroll para cargar más noticias
+        for _ in range(6):
+            page.mouse.wheel(0, 1500)
             time.sleep(1)
 
-        # Tomar screenshot extra (opcional)
-        page.screenshot(path="videos/screenshot.png")
+        # Extraer artículos
+        items = page.query_selector_all("article h2 a")
+        for item in items:
+            title = item.inner_text()
+            link = item.get_attribute("href")
+            articles.append({
+                "title": title,
+                "url": link
+            })
 
-        context.close()  # IMPORTANTE: cierra y guarda el video
+        context.close()
         browser.close()
 
-    return jsonify({
-        "status": "ok",
-        "message": "Video grabado",
-        "video_dir": "videos/"
-    })
+    return {
+        "run_id": run_id,
+        "count": len(articles),
+        "articles": articles,
+        "video": f"/videos/{run_id}"
+    }
+
+@app.route("/videos/<path:path>")
+def videos(path):
+    return send_from_directory("videos", path)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
